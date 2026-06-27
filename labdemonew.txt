@@ -1,0 +1,86 @@
+terraform {
+
+required_providers {
+
+azurerm = {
+
+source = "hashicorp/azurerm" # Specifies the source for the Azure provider plugin.
+
+version = "~>2.0" # Ensures the Azure provider plugin version is 2.x.x (compatible with this configuration).
+
+}
+
+}
+
+}
+
+provider "azurerm" {
+
+features {} # Required for newer versions of the Azure provider, initializes provider features.
+
+subscription_id = "294fc8e5-3491-4a9e-8db3-78b02fd829e3" # Your Azure subscription ID.
+
+tenant_id = "91ea826a-20e0-408f-995f-122365df91f9" # Your Azure Active Directory (AAD) tenant ID.
+
+client_id = "fe7658fa-b040-43a5-b379-61ceb90ca8cf" # The client ID of the service principal for authentication.
+
+client_secret = "NhC8Q~rqlvxAsfymC6royDxKeyMZn4TaNNivIcDd" # The client secret of the service principal.
+
+}
+resource "azurerm_resource_group" "example" {
+
+name = "NivethaVMDemo1" # Resource group name
+
+location = "WestUS2" # Azure region
+
+}
+
+resource "azurerm_virtual_network" "example" {
+  name                = "NivethaVNET"
+  address_space       = ["10.1.0.0/16"]
+  location            = azurerm_resource_group.example.location
+  resource_group_name = azurerm_resource_group.example.name
+}
+
+resource "azurerm_subnet" "publicsubnet" {
+  name                 = "publicsubnet"
+  resource_group_name  = azurerm_resource_group.example.name
+  virtual_network_name = azurerm_virtual_network.example.name
+  address_prefixes     = ["10.1.1.0/24"]
+}
+
+resource "azurerm_network_interface" "example" {
+  name                = "Nivetha-nic"
+  location            = azurerm_resource_group.example.location
+  resource_group_name = azurerm_resource_group.example.name
+
+  ip_configuration {
+    name                          = "publicsubnet"
+    subnet_id                     = azurerm_subnet.example.id
+    private_ip_address_allocation = "Dynamic"
+  }
+}
+
+resource "azurerm_windows_virtual_machine" "example" {
+  name                = "Nivethamachine"
+  resource_group_name = azurerm_resource_group.example.name
+  location            = azurerm_resource_group.example.location
+  size                = "Standard_DS1_v2"
+  admin_username      = "adminuser"
+  admin_password      = "P@$$w0rd1234!"
+  network_interface_ids = [
+    azurerm_network_interface.example.id,
+  ]
+
+  os_disk {
+    caching              = "ReadWrite"
+    storage_account_type = "Standard_LRS"
+  }
+
+  source_image_reference {
+    publisher = "MicrosoftWindowsServer"
+    offer     = "WindowsServer"
+    sku       = "2016-Datacenter"
+    version   = "latest"
+  }
+}
